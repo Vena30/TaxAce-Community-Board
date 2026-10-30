@@ -59,6 +59,13 @@ Send it to that person privately (not in a group chat). They log in, choose thei
 
 ---
 
+## Profile photos
+Click the 📷 on your picture in the left panel (or **Change profile photo** in the avatar menu at the top right).
+The photo is cropped to a square and shown on your posts and comments, for logged-in teammates only.
+
+## Updating an existing install
+Copy the new files over your repo, then run `npm run db:init` once (it only adds what's missing; nothing is deleted) and restart `npm run dev` or redeploy.
+
 ## Everyday admin tasks (all under Manage team)
 
 | Situation | What to do |
@@ -84,12 +91,14 @@ Send it to that person privately (not in a group chat). They log in, choose thei
 - Photos are resized in the browser and stored in the database (fine for a team this size).
 - Display names are set by the admin (people can't rename themselves, so nobody can pose as someone else).
 
-## Run it on your own computer / Codespaces (optional)
+## Try it in Codespaces first (no Vercel needed)
+After steps 2 and 4 of the setup (Neon database + `.env.local` + `npm run db:init` + `npm run seed-admin`):
 ```bash
-npm install -g vercel
-vercel dev
+npm run dev
 ```
-(needs `DATABASE_URL` and `APP_SECRET` in `.env.local`)
+Then open the **PORTS** tab in Codespaces, find port **3000**, and click the globe icon (Open in Browser).
+Log in with the starter password from `seed-admin`. Stop the server with `Ctrl+C`.
+It uses the same code and the same Neon database that Vercel would, so anything you add now is still there after you deploy.
 
 ## What's in here
 ```
@@ -97,6 +106,6 @@ public/index.html       the board (themes, drawing, posts) + login screens
 api/[...path].js        the server routes (one function)
 lib/                    login, MFA, posts, admin code
 db/schema.sql           database tables
-scripts/                db:init and seed-admin helpers
+scripts/                dev server, db:init and seed-admin helpers
 vercel.json             security headers
 ```

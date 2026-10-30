@@ -26,6 +26,9 @@ create table if not exists media (
   created_at timestamptz not null default now()
 );
 
+-- Profile photo (added later; safe to run on a database that already has members)
+alter table members add column if not exists avatar_media_id uuid references media(id) on delete set null;
+
 create table if not exists posts (
   id            uuid primary key default gen_random_uuid(),
   author_id     uuid not null references members(id),

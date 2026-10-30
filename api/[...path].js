@@ -5,9 +5,12 @@ const { HttpError, send, readBody, checkOrigin } = require('../lib/http');
 const auth = require('../lib/handlers/auth');
 const posts = require('../lib/handlers/posts');
 const admin = require('../lib/handlers/admin');
+const profile = require('../lib/handlers/profile');
 
 const ROUTES = [
   ['GET',    'me',                          auth.me],
+  ['POST',   'me/avatar',                   profile.setAvatar],
+  ['DELETE', 'me/avatar',                   profile.removeAvatar],
   ['POST',   'auth/login',                  auth.login],
   ['POST',   'auth/logout',                 auth.logout],
   ['POST',   'auth/password',               auth.changePassword],

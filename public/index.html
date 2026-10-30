@@ -264,12 +264,19 @@ body.locked .wrap,body.locked .tstrip{visibility:hidden}
 
 /* space between posts in the shared feed */
 #feed{display:flex;flex-direction:column;gap:14px}
+
+/* Profile photos */
+#av-in{display:none}
+.pf-av-wrap{position:relative;flex-shrink:0}
+.pf-cam{position:absolute;right:-4px;bottom:-2px;width:26px;height:26px;border-radius:50%;border:2px solid var(--cd);background:var(--ac);color:#fff;font-size:12px;line-height:1;display:flex;align-items:center;justify-content:center;transition:background .2s}
+.pf-cam:hover{background:var(--ach)}
 </style>
 </head>
 <body class="locked">
 <div id="deco-layer"></div>
 <div class="toast" id="toast"></div>
 <input type="file" id="file-in" accept="image/*">
+<input type="file" id="av-in" accept="image/*">
 
 <header class="hdr">
   <div class="hdr-logo">
@@ -288,6 +295,8 @@ body.locked .wrap,body.locked .tstrip{visibility:hidden}
     <button class="hdr-av" id="hdr-av" onclick="toggleAcct(event)" title="Account" aria-label="Account menu">?</button>
     <div class="acct-menu" id="acct-menu">
       <div class="am-who"><strong id="am-nm"></strong><span id="am-em"></span></div>
+      <button onclick="pickAvatar()">📷 Change profile photo</button>
+      <button id="am-rmav" onclick="removeAvatar()" style="display:none">🖼️ Remove profile photo</button>
       <button onclick="openPwModal()">🔑 Change password</button>
       <button id="am-admin" onclick="openAdmin()" style="display:none">👥 Manage team</button>
       <button onclick="logout()">🚪 Log out</button>
@@ -304,7 +313,7 @@ body.locked .wrap,body.locked .tstrip{visibility:hidden}
 <div class="wrap">
   <aside class="sidebar">
     <div class="card pc">
-      <div class="pf-av" id="pf-av">?</div>
+      <div class="pf-av-wrap"><div class="pf-av" id="pf-av">?</div><button class="pf-cam" onclick="pickAvatar()" title="Change profile photo" aria-label="Change profile photo">📷</button></div>
       <div><div class="pf-nm" id="pf-nm">Team Member</div><div class="pf-ro" id="pf-ro">TaxAce Team</div></div>
       <div class="pf-em" id="pf-em"></div>
       <button class="pf-sv alt" onclick="openPwModal()">Change password</button>
@@ -452,6 +461,11 @@ async function api(path,opts){
 }
 function hasRxn(pid,em){const p=FEED.find(x=>x.id===pid);return !!(p&&p.mine&&p.mine.indexOf(em)>-1)}
 
+/* Avatars: a photo when the person has one, otherwise their coloured initial. */
+function avStyle(name,url){return url?'background:#8884 url('+esc(url)+') center/cover no-repeat':avSt(name)}
+function avDiv(cls,name,url){return '<div class="'+cls+'" style="'+avStyle(name,url)+'">'+(url?'':esc(ini(name)))+'</div>'}
+function setAv(el,name,url){el.textContent=url?'':ini(name);el.setAttribute('style',avStyle(name,url))}
+
 /* ── HELPERS ── */
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
 function avC(n){let h=0;for(const c of(n||'X'))h=(h*31+c.charCodeAt(0))&0xffffffff;return AVC[Math.abs(h)%AVC.length]}
@@ -517,8 +531,9 @@ function renderEvents(){
 /* ── USER ── */
 function applyUser(){
   uname=me?me.name:'';
-  const s=avSt(uname||'?'),i=ini(uname);
-  ['pf-av','c-av','hdr-av'].forEach(id=>{const el=document.getElementById(id);if(el){el.textContent=i;el.setAttribute('style',s)}});
+  const url=(me&&me.avatarUrl)||null;
+  ['pf-av','c-av','hdr-av'].forEach(id=>{const el=document.getElementById(id);if(el)setAv(el,uname||'?',url)});
+  const rm=document.getElementById('am-rmav');if(rm)rm.style.display=url?'block':'none';
   const isAdmin=!!(me&&me.role==='admin');
   const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v};
   set('pf-nm',uname||'Team Member');set('pf-ro',isAdmin?'Team Admin':'TaxAce Team');set('pf-em',me?me.email:'');
@@ -643,7 +658,7 @@ function postHtml(p){
   let rxnH='';
   for(const[em,cnt]of Object.entries(p.reactions||{})){if(cnt>0){const mine=hasRxn(p.id,em)?'me':'';rxnH+='<button class="rxn '+mine+'" onclick="togRxn(\''+p.id+'\',\''+esc(em)+'\')">'+em+'<span class="rxn-n">'+cnt+'</span></button>'}}
   rxnH+='<button class="add-rxn" onclick="showPick(event,\''+p.id+'\')">+ 😊</button>';
-  return '<div class="post-card" id="pc-'+esc(p.id)+'" style="border-left-color:'+bC+'"><div class="pi"><div class="p-hdr"><div class="p-av" style="'+avSt(p.author)+'">'+ini(p.author)+'</div><div class="p-meta"><div class="p-who">'+esc(p.author)+'</div><div class="p-ts">'+tAgo(p.ts)+edTag+'</div></div>'+((isOwn||canDel)?'<div class="p-acts">'+(isOwn?'<button class="p-edb" onclick="startEdit(\''+p.id+'\')" title="Edit">✏️</button>':'')+(canDel?'<button class="p-del" onclick="delPost(\''+p.id+'\')" title="Delete">🗑️</button>':'')+'</div>':'')+
+  return '<div class="post-card" id="pc-'+esc(p.id)+'" style="border-left-color:'+bC+'"><div class="pi"><div class="p-hdr">'+avDiv('p-av',p.author,p.avatarUrl)+'<div class="p-meta"><div class="p-who">'+esc(p.author)+'</div><div class="p-ts">'+tAgo(p.ts)+edTag+'</div></div>'+((isOwn||canDel)?'<div class="p-acts">'+(isOwn?'<button class="p-edb" onclick="startEdit(\''+p.id+'\')" title="Edit">✏️</button>':'')+(canDel?'<button class="p-del" onclick="delPost(\''+p.id+'\')" title="Delete">🗑️</button>':'')+'</div>':'')+
   '</div>'+
   (p.content?'<div class="p-cnt" id="pcnt-'+esc(p.id)+'">'+esc(p.content)+'</div>':'<div class="p-cnt" id="pcnt-'+esc(p.id)+'" style="display:none"></div>')+
   '<div class="p-ea" id="pea-'+esc(p.id)+'"><textarea class="p-eta" id="peta-'+esc(p.id)+'">'+esc(p.content||'')+'</textarea><div class="ea-row"><button class="ea-c" onclick="cancelEdit(\''+p.id+'\')">Cancel</button><button class="ea-s" onclick="saveEdit(\''+p.id+'\')">Save Changes</button></div></div>'+
@@ -705,8 +720,8 @@ function togCmts(pid){
 function drawCmts(pid,area){
   const post=FEED.find(p=>p.id===pid);
   const cmts=post?.comments||[];
-  const list=cmts.map(c=>'<div class="cmt"><div class="cm-av" style="'+avSt(c.author)+'">'+ini(c.author)+'</div><div class="cm-body"><div class="cm-who">'+esc(c.author)+'</div><div class="cm-txt">'+esc(c.content)+'</div><div class="cm-ts">'+tAgo(c.ts)+'</div></div></div>').join('');
-  area.innerHTML='<div class="ca">'+list+'</div><div class="cm-row"><div class="cm-av" style="'+avSt(uname)+'">'+ini(uname)+'</div><textarea class="cm-in" id="ci-'+esc(pid)+'" placeholder="Write a comment&hellip;" rows="1" onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();postCmt(\''+esc(pid)+'\')}"></textarea><button class="cm-snd" onclick="postCmt(\''+esc(pid)+'\')">&#10148;</button></div>';
+  const list=cmts.map(c=>'<div class="cmt">'+avDiv('cm-av',c.author,c.avatarUrl)+'<div class="cm-body"><div class="cm-who">'+esc(c.author)+'</div><div class="cm-txt">'+esc(c.content)+'</div><div class="cm-ts">'+tAgo(c.ts)+'</div></div></div>').join('');
+  area.innerHTML='<div class="ca">'+list+'</div><div class="cm-row">'+avDiv('cm-av',uname,me&&me.avatarUrl)+'<textarea class="cm-in" id="ci-'+esc(pid)+'" placeholder="Write a comment&hellip;" rows="1" onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();postCmt(\''+esc(pid)+'\')}"></textarea><button class="cm-snd" onclick="postCmt(\''+esc(pid)+'\')">&#10148;</button></div>';
 }
 async function postCmt(pid){
   const inp=document.getElementById('ci-'+pid);if(!inp)return;
@@ -947,6 +962,40 @@ async function admAct(id,action){
     }
     await renderAdmin(note);
   }catch(e){toast(e.message)}
+}
+
+/* ── PROFILE PHOTO ── */
+function pickAvatar(){closeAcct();document.getElementById('av-in').click()}
+/* Centre-crops to a square and shrinks to 256x256 so uploads are tiny. */
+function squareAvatar(file){
+  return new Promise((res,rej)=>{
+    const img=new Image();const url=URL.createObjectURL(file);
+    img.onload=()=>{
+      const S=256,cv=document.createElement('canvas');cv.width=cv.height=S;
+      const ctx=cv.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,S,S);
+      const m=Math.min(img.width,img.height);
+      ctx.drawImage(img,(img.width-m)/2,(img.height-m)/2,m,m,0,0,S,S);
+      URL.revokeObjectURL(url);res(cv.toDataURL('image/jpeg',0.85));
+    };
+    img.onerror=()=>{URL.revokeObjectURL(url);rej(new Error('That file could not be read as a picture. Try a JPG or PNG.'))};
+    img.src=url;
+  });
+}
+document.getElementById('av-in').addEventListener('change',async e=>{
+  const f=e.target.files[0];e.target.value='';
+  if(!f)return;
+  if(!/^image\//.test(f.type)){toast('Please choose a picture (JPG or PNG).');return}
+  try{
+    const dataUrl=await squareAvatar(f);
+    const d=await api('me/avatar',{method:'POST',body:{imageUrl:dataUrl}});
+    me=d.member;applyUser();toast('Profile photo updated ✓');loadFeed({keep:true});
+  }catch(err){toast(err.message)}
+});
+async function removeAvatar(){
+  closeAcct();
+  if(!confirm('Remove your profile photo?'))return;
+  try{const d=await api('me/avatar',{method:'DELETE'});me=d.member;applyUser();toast('Profile photo removed.');loadFeed({keep:true})}
+  catch(e){toast(e.message)}
 }
 
 /* ── INIT ── */
